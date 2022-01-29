@@ -230,7 +230,6 @@ class YolactNode(Node):
             self.unpause_visualization.clear()
 
     def img_callback_(self, msg):
-        self.get_logger().info('IMAGE CALLBACK CALLED')
         try:
             if (self.use_compressed_image_):
                 np_arr = np.fromstring(msg.data, np.uint8)
