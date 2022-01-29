@@ -34,6 +34,7 @@ coco_cats_inv = {}
 color_cache = defaultdict(lambda: {})
 
 class YolactNode(Node):
+
     def __init__(self, node_name):
         super().__init__(node_name)
         self.initParams_()
@@ -46,24 +47,23 @@ class YolactNode(Node):
         self.bridge = CvBridge()
 
         self.declare_parameters(
-        namespace='',
-        parameters=[
-            ('yolact_path', self.yolact_path_),
-            ('model_path', self.model_path_),
-            ('image_topic', self.image_topic_),
-            ('use_compressed_image', self.use_compressed_image_),
-            ('publish_visualization', self.publish_visualization_),
-            ('publish_detections', self.publish_detections_),
-            ('display_visualization', self.display_visualization_),
-            ('display_masks', self.display_masks_),
-            ('display_bboxes', self.display_bboxes_),
-            ('display_text', self.display_text_),
-            ('display_scores', self.display_scores_),
-            ('display_fps', self.display_fps_),
-            ('score_threshold', self.score_threshold_),
-            ('crop_masks', self.crop_masks_),
-            ('top_k', self.top_k_),
-            ('publish_namespace', '/yolact_ros2')
+            namespace='',
+            parameters=[
+                ('model_path', self.model_path_),
+                ('image_topic', self.image_topic_),
+                ('use_compressed_image', self.use_compressed_image_),
+                ('publish_visualization', self.publish_visualization_),
+                ('publish_detections', self.publish_detections_),
+                ('display_visualization', self.display_visualization_),
+                ('display_masks', self.display_masks_),
+                ('display_bboxes', self.display_bboxes_),
+                ('display_text', self.display_text_),
+                ('display_scores', self.display_scores_),
+                ('display_fps', self.display_fps_),
+                ('score_threshold', self.score_threshold_),
+                ('crop_masks', self.crop_masks_),
+                ('top_k', self.top_k_),
+                ('publish_namespace', '/yolact_ros2')
         ])
         publish_ns = self.get_parameter('publish_namespace')._value
         self.image_pub = self.create_publisher(Image, f'{publish_ns}/visualization',
@@ -74,9 +74,9 @@ class YolactNode(Node):
 
         # Set Reconfigurable parameters Callback:
 
-        self.set_parameters_callback(self.parameter_callback_)
+        #self.set_parameters_callback(self.parameter_callback_)
 
-        sys.path.append(self.yolact_path_)
+        #sys.path.append(self.yolact_path_)
 
         self.loadWeights_()
 
@@ -88,7 +88,7 @@ class YolactNode(Node):
         self.frame_counter = 0
 
     def loadWeights_(self):
-        from yolact import Yolact
+        from yolact.yolact import Yolact
         from layers.output_utils import undo_image_transformation
         from data import COCODetection, get_label_map, MEANS
         from data import cfg, set_cfg, set_dataset
@@ -121,9 +121,8 @@ class YolactNode(Node):
             cfg.mask_proto_debug = False
 
     def initParams_(self):
-        self.yolact_path_ = None
-        self.model_path_ = None
-        self.image_topic_ = '/camera/color/image_raw'
+        self.model_path_ = ""
+        self.image_topic_ = '/image_raw'
         self.use_compressed_image_ = False
         self.publish_visualization_ = True
         self.publish_detections_ = True
@@ -135,14 +134,13 @@ class YolactNode(Node):
         self.display_fps_ = False
         self.score_threshold_ = 0.0
         self.crop_masks_ = True
-        self.top_k_ = True
+        self.top_k_ = 5
 
         # Set the QoS Profile:
 
         self.qos_profile = qos.QoSProfile(depth=1, reliability=qos.QoSReliabilityPolicy.BEST_EFFORT)
 
     def setParams_(self):
-        self.yolact_path_ = self.get_parameter('yolact_path')._value
         self.model_path_ = self.get_parameter('model_path')._value
         self.image_topic_ = self.get_parameter('image_topic')._value
         self.use_compressed_image_ = self.get_parameter('use_compressed_image')._value
@@ -161,9 +159,6 @@ class YolactNode(Node):
     def parameter_callback_(self, params):
         model_path_changed = False
         for param in params:
-            if (param.name == 'yolact_path' and param.type_ == param.Type.STRING):
-                self.yolact_path_ = param.value
-                continue
             if (param.name == 'model_path' and param.type_ == param.Type.STRING):
                 self.model_path_ = param.value
                 model_path_changed = True
@@ -219,6 +214,7 @@ class YolactNode(Node):
             self.create_subscription(CompressedImage, '/compressed', self.img_callback_,
                 qos_profile=self.qos_profile)
         else:
+            self.get_logger().info(f'Creating subscription in {self.image_topic_}')
             self.create_subscription(Image, self.image_topic_, self.img_callback_,
                 qos_profile=self.qos_profile)
 
@@ -234,7 +230,7 @@ class YolactNode(Node):
             self.unpause_visualization.clear()
 
     def img_callback_(self, msg):
-
+        self.get_logger().info('IMAGE CALLBACK CALLED')
         try:
             if (self.use_compressed_image_):
                 np_arr = np.fromstring(msg.data, np.uint8)
@@ -243,7 +239,6 @@ class YolactNode(Node):
                 cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
         except CvBridgeError as e:
             self.get_logger().error(e)
-
         self.evalimage_(cv_image, msg.header)
 
     def evalimage_(self, cv_image, image_header):
@@ -431,7 +426,6 @@ class YolactNode(Node):
         return dets_msg
 
     def visualizationLoop_(self):
-        print('Creating cv2 window')
         window_name = 'Segmentation results'
         cv2.namedWindow(window_name)
         self.get_logger().info('Window successfully created')
