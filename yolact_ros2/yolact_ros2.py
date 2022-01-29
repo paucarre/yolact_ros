@@ -246,9 +246,10 @@ class YolactNode(Node):
         with torch.no_grad():
             frame = torch.from_numpy(cv_image).cuda().float()
             batch = FastBaseTransform()(frame.unsqueeze(0))
-            preds = self.net(batch)
+            preds, embeddings = self.net(batch)
 
             h, w, _ = frame.shape
+            #preds
             classes, scores, boxes, masks = self.postprocess_results_(preds, w, h)
 
             if (self.display_fps_):
