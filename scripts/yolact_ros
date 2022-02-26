@@ -3,7 +3,7 @@ import roslib
 roslib.load_manifest('yolact_ros')
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), "yolact"))
+#sys.path.append(os.path.join(os.path.dirname(__file__), "yolact"))
 import rospy
 import rospkg
 import cv2
@@ -26,7 +26,7 @@ import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
 from torch.autograd import Variable
-from yolact import Yolact
+from yolact.yolact import Yolact
 from utils.augmentations import BaseTransform, FastBaseTransform, Resize
 from layers.output_utils import postprocess, undo_image_transformation
 from data import COCODetection, get_label_map, MEANS, COLORS
@@ -304,7 +304,7 @@ class YolactNode:
     with torch.no_grad():
       frame = torch.from_numpy(cv_image).cuda().float()
       batch = FastBaseTransform()(frame.unsqueeze(0))
-      preds = self.net(batch)
+      preds, embeddings = self.net(batch)
 
       h, w, _ = frame.shape
       classes, scores, boxes, masks = self.postprocess_results(preds, w, h)
